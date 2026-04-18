@@ -314,6 +314,7 @@ export class AzollaPipeline {
     // 4. Feature Extraction
     let features: FeatureRecord | undefined;
     if (qc.is_valid && plantPixels > 50) {
+      console.log(`Starting feature extraction for ${plantPixels} pixels...`);
       const mean_r = r_vals.reduce((a, b) => a + b, 0) / plantPixels;
       const mean_g = g_vals.reduce((a, b) => a + b, 0) / plantPixels;
       const mean_b = b_vals.reduce((a, b) => a + b, 0) / plantPixels;
@@ -344,9 +345,13 @@ export class AzollaPipeline {
         glcm_entropy: entropy,
         glcm_homogeneity: homogeneity
       };
+      console.log(`Features extracted: rg_ratio=${features.rg_ratio.toFixed(3)}`);
+    } else {
+      console.warn(`Skipping feature extraction: valid=${qc.is_valid}, pixels=${plantPixels}`);
     }
 
     // Final Visualizations
+    console.log("Generating visualization buffers...");
     const processedImage = await sharp(data, { raw: { width, height, channels } })
       .jpeg({ quality: 90 })
       .toBuffer();
@@ -371,9 +376,11 @@ export class AzollaPipeline {
 
     // 5. Pixel-based Stress Mapping
     if (qc.is_valid && plantPixels > 50) {
+      console.log(`Starting stress mapping with colormap: ${colormap}`);
       const mapper = new PixelStressMapper(this.baseline_stats, { colormap });
       const stressResult = await mapper.process(data, maskArray, width, height, channels, timestamp);
       result.stressMap = stressResult;
+      console.log(`Stress mapping complete: coverage=${stressResult.metrics.stress_coverage_pct.toFixed(2)}%`);
     }
 
     return result;

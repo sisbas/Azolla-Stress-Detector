@@ -206,19 +206,18 @@ export class PixelStressMapper {
 
     for (let j = 0; j < pixelCount; j++) {
       const score = mask[j] === 1 ? smoothedScoreMap[j] : 0;
-      const effectiveScore = score < this.cfg.z_threshold ? 0 : score;
       
       if (mask[j] === 1) {
-        if (effectiveScore > this.cfg.z_threshold) stressPixels++;
-        sumStress += effectiveScore;
-        if (effectiveScore > maxStress) maxStress = effectiveScore;
+        if (score > this.cfg.z_threshold) stressPixels++;
+        sumStress += score;
+        if (score > maxStress) maxStress = score;
       }
 
-      const normScore = Math.max(0, Math.min(1, (effectiveScore - minRange) / (maxRange - minRange + 1e-8)));
+      const normScore = Math.max(0, Math.min(1, (score - minRange) / (maxRange - minRange + 1e-8)));
       const [pr, pg, pb] = this.getStressColor(normScore);
 
-      // Pseudocolor should be black for non-plant or non-stressed pixels
-      if (mask[j] === 1 && effectiveScore > 0) {
+      // Pseudocolor: All plant pixels colored
+      if (mask[j] === 1) {
         pseudoBuffer[j * 3] = pr;
         pseudoBuffer[j * 3 + 1] = pg;
         pseudoBuffer[j * 3 + 2] = pb;
@@ -228,7 +227,8 @@ export class PixelStressMapper {
         pseudoBuffer[j * 3 + 2] = 0;
       }
 
-      const alpha = mask[j] === 1 && effectiveScore > 0 ? this.cfg.alpha_overlay : 0;
+      // Overlay: All plant pixels blended
+      const alpha = mask[j] === 1 ? this.cfg.alpha_overlay : 0;
       const baseIdx = j * channels;
       
       overlayBuffer[j * 3] = Math.round(imgData[baseIdx] * (1 - alpha) + pr * alpha);

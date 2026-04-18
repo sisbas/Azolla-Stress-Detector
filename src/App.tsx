@@ -103,6 +103,7 @@ export default function App() {
   const [history, setHistory] = useState<FeatureRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"original" | "mask" | "stress">("original");
+  const [stressViewType, setStressViewType] = useState<"overlay" | "pseudo">("overlay");
   const [activeTab, setActiveTab] = useState<"analysis" | "trends" | "history" | "validation" | "ai">("analysis");
   const [isExporting, setIsExporting] = useState(false);
   const [isAIAnalyzing, setIsAIAnalyzing] = useState(false);
@@ -451,12 +452,26 @@ export default function App() {
                           Maske
                         </button>
                         {result.stressMap && (
-                          <button 
-                            onClick={() => setViewMode("stress")}
-                            className={`px-3 py-1.5 rounded-md text-[10px] transition-all ${viewMode === "stress" ? 'bg-accent text-bg font-bold' : 'text-text-secondary hover:text-white'}`}
-                          >
-                            Stres Haritası
-                          </button>
+                          <div className="flex bg-black/40 backdrop-blur-md rounded-lg p-1 border border-white/10 shadow-xl ml-2">
+                            <button 
+                              onClick={() => {
+                                setViewMode("stress");
+                                setStressViewType("overlay");
+                              }}
+                              className={`px-3 py-1.5 rounded-md text-[10px] transition-all ${viewMode === "stress" && stressViewType === "overlay" ? 'bg-accent text-bg font-bold' : 'text-text-secondary hover:text-white'}`}
+                            >
+                              Overlay
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setViewMode("stress");
+                                setStressViewType("pseudo");
+                              }}
+                              className={`px-3 py-1.5 rounded-md text-[10px] transition-all ${viewMode === "stress" && stressViewType === "pseudo" ? 'bg-accent text-bg font-bold' : 'text-text-secondary hover:text-white'}`}
+                            >
+                              Yalancı Renk
+                            </button>
+                          </div>
                         )}
                       </div>
 
@@ -509,13 +524,14 @@ export default function App() {
                   <div className="w-full h-full flex flex-col gap-4">
                     <div className="relative flex-1 bg-black rounded overflow-hidden border border-border">
                       <img 
-                        src={`data:image/${viewMode === "original" || viewMode === "stress" ? "jpeg" : "png"};base64,${
+                        src={`data:image/${(viewMode === "original" || (viewMode === "stress" && stressViewType === "overlay")) ? "jpeg" : "png"};base64,${
                           viewMode === "original" ? result.processedImage : 
                           viewMode === "mask" ? result.maskImage : 
-                          result.stressMap?.overlay
+                          stressViewType === "overlay" ? result.stressMap?.overlay : result.stressMap?.pseudocolor
                         }`} 
                         alt="Processed" 
                         className="w-full h-full object-contain"
+                        referrerPolicy="no-referrer"
                       />
                       {viewMode === "stress" && (
                         <div className="absolute bottom-4 right-4 bg-black/80 p-2 rounded border border-white/20 text-[10px] text-white">
