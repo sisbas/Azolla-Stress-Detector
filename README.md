@@ -27,6 +27,19 @@ Bu uygulama, Azolla bitkilerinde erken evre stres belirtilerini görüntü işle
    ```
 3. Tarayıcınızda `http://localhost:3000` adresine gidin.
 
+
+## 🤗 Hugging Face Spaces (Docker)
+
+Bu repo, Docker tabanlı Hugging Face Space ortamında çalışacak şekilde ayarlanmıştır.
+
+- Uygulama portu `PORT` environment variable üzerinden okunur (Space içinde varsayılan `7860`).
+- Container başlangıcında üretim derlemesi (`npm run build`) hazırlanır ve `npm run start` ile servis ayağa kalkar.
+
+### Önerilen Space ayarı
+- **SDK:** Docker
+- **App Port:** `7860`
+- **Space Secrets / Variables:** Gerekli ise `.env` değişkenlerinizi buradan ekleyin (örn. API key).
+
 ## 📖 Kullanım
 
 1. **Analiz:** "Görüntü Yükle" butonu ile Azolla bitkisinin fotoğrafını sisteme aktarın. Sistem otomatik olarak segmentasyon yapacak ve özellikleri çıkaracaktır.
