@@ -1,96 +1,105 @@
-# Azolla Erken Stres Tespit Sistemi (Azolla Stress Detection Pipeline)
+# Azolla RGB Growth & Stress Analyzer
 
-Bu uygulama, Azolla bitkilerinde erken evre stres belirtilerini görüntü işleme ve istatistiksel analiz yöntemleriyle tespit etmek için geliştirilmiş uçtan uca (end-to-end) bir araştırma hattıdır. Akademik çalışmalar, tezler ve laboratuvar deneyleri için izlenebilir, tekrarlanabilir ve bilimsel geçerliliği olan veriler üretir.
+Azolla bitkisi için RGB fotoğraflardan **segmentasyon, alan-bazlı büyüme, erken stres göstergeleri ve zaman serisi analizleri** üreten araştırma prototipi.
 
-## 🚀 Temel Özellikler
+> ⚠️ **Bilimsel not:** RGB görüntüler doğrudan klorofil, biyokütle veya stres ölçmez. Bu sistem yalnızca görüntü tabanlı dolaylı göstergeler üretir. Gerçek biyokütle tahmini için taze ağırlık ölçümleriyle kalibrasyon gerekir.
 
-- **Gelişmiş Görüntü İşleme:** Sharp kütüphanesi kullanılarak standardizasyon, parlama maskeleme ve ExG (Excess Green) tabanlı segmentasyon.
-- **Zaman Serisi Analizi:** Birden fazla zaman noktasından gelen verileri birleştirerek stres olasılığı hesaplama.
-- **İstatistiksel Validasyon:** Cross-Validation, Bootstrap Güven Aralıkları ve Proxy Mixed-Effects Model (LME) analizi.
-- **Akademik Raporlama:** Deney metadata'sı, CSV formatında karar kayıtları, denetim izleri (Audit Log) ve teze hazır LaTeX tablo çıktıları.
-- **Modern Arayüz:** Recharts ile görselleştirme, Tailwind CSS ile şık ve karanlık tema (Sophisticated Dark).
+## Proje çıktıları
+- `backend/` — FastAPI + OpenCV + SQLAlchemy servisleri
+- `frontend/` — React + TypeScript + Vite + Tailwind + Recharts + Konva tabanlı arayüz
+- `requirements.txt`
+- `docker-compose.yml`
+- `.env.example`
+- `docs/API.md`
 
-## 🛠 Kurulum
+## Backend mimarisi
 
-### Gereksinimler
-- Node.js (v18+)
-- npm
+### Servis modülleri
+- `app/services/segmentation.py`
+  - `load_image`, `read_exif_date`, `normalize_rgb`, `compute_exg`, `compute_exr`
+  - `create_green_mask`, `create_red_stress_mask`, `combine_masks`
+  - `clean_mask`, `remove_small_components`, `fill_holes`, `extract_roi`
+  - `apply_mask`, `save_mask_and_segmented_image`
+- `app/services/growth.py`
+  - `calculate_plant_area`, `calculate_coverage_ratio`, `compare_two_images`, `calculate_area_based_rgr`
+- `app/services/stress.py`
+  - RGB indeksleri + baseline bazlı StressScore (0-100)
+- `app/services/timeline.py`
+  - sıralama, büyüme/stres timeline üretimi, anomaly tespiti
+- `app/services/calibration.py`
+  - Linear Regression + Random Forest Regression
 
-### Adımlar
-1. Bağımlılıkları yükleyin:
-   ```bash
-   npm install
-   ```
-2. Uygulamayı geliştirme modunda başlatın:
-   ```bash
-   npm run dev
-   ```
-3. Tarayıcınızda `http://localhost:3000` adresine gidin.
+### Segmentasyon akışı
+1. RGB görsel okunur.
+2. HSV/Lab dönüşümleri kullanılır.
+3. Yeşil maske (HSV + ExG) üretilir.
+4. Stresli kırmızı-kahverengi maske (HSV + Lab + ExR) üretilir.
+5. Maskeler birleştirilir.
+6. Opening/closing uygulanır.
+7. Küçük bileşenler temizlenir.
+8. Boşluklar doldurulur.
+9. En büyük component seçilir.
+10. Maske, izole görüntü, ROI ve alan üretilir.
 
-## 📖 Kullanım
+### API endpointleri
+- `POST /api/experiments`
+- `POST /api/experiments/{id}/images`
+- `POST /api/images/{id}/analyze`
+- `PUT /api/images/{id}/mask`
+- `GET /api/experiments/{id}/timeline`
+- `POST /api/experiments/{id}/compare`
+- `POST /api/experiments/{id}/calibration-data`
+- `POST /api/experiments/{id}/train-biomass-model`
+- `GET /api/experiments/{id}/export`
 
-1. **Analiz:** "Görüntü Yükle" butonu ile Azolla bitkisinin fotoğrafını sisteme aktarın. Sistem otomatik olarak segmentasyon yapacak ve özellikleri çıkaracaktır.
-2. **Trend Takibi:** Birden fazla görüntü yükledikçe "Trendler" sekmesinde stres olasılığının zamanla değişimini izleyin.
-3. **Validasyon:** "Validasyon" sekmesine geçerek modelin istatistiksel güvenilirliğini kontrol edin.
-4. **Raporlama:** "Nihai Rapor Oluştur" butonuna tıklayarak deney sonuçlarını sunucuya kaydedin ve LaTeX kodunu alın.
+## Frontend ekranları
+1. Deney oluşturma
+2. Görsel yükleme
+3. Segmentasyon sonucu
+4. Manuel maske/ROI düzeltme
+5. İki görsel karşılaştırma
+6. Zaman serisi dashboard
+7. Kalibrasyon verisi girişi
+8. CSV dışa aktarım
 
-## 📡 API Referansı
+## Kalite kontrol uyarıları
+- Görsel çok karanlık
+- Görsel aşırı parlak
+- Görsel bulanık
+- Segmentasyon alanı çok küçük
+- Maskede çok fazla küçük obje var
+- Tarih bilgisi eksik
+- Ölçek bilgisi eksik
+- Stres skoru güvenilirliği düşük
 
-Sunucu varsayılan olarak `3000` portunda çalışır. Tüm API istekleri `/api` ön ekiyle başlar.
+## Kurulum ve çalıştırma
 
-### 1. Health Check
-Sistemin ve aktif deneyin durumunu kontrol eder.
+### 1) Ortam değişkenleri
+```bash
+cp .env.example .env
+```
 
-- **Endpoint:** `GET /api/health`
-- **Yanıt:**
-  ```json
-  {
-    "status": "ok",
-    "timestamp": "2026-04-15T...",
-    "experimentId": "exp_123456789"
-  }
-  ```
+### 2) Backend (yerel)
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cd backend
+uvicorn app.main:app --reload --port 8000
+```
 
-### 2. Görüntü Analizi
-Yüklenen görüntüyü işler ve biyolojik özellikleri çıkarır.
+### 3) Frontend (yerel)
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-- **Endpoint:** `POST /api/analyze`
-- **İçerik Tipi:** `multipart/form-data`
-- **Parametreler:** `image` (File)
-- **Yanıt:** `AnalysisResult` objesi (Base64 işlenmiş görüntü, maske ve özellik kayıtları).
+### 4) Docker ile
+```bash
+docker compose up --build
+```
 
-### 3. Rapor Oluşturma
-Deney verilerini arşivler ve akademik rapor dosyalarını üretir.
-
-- **Endpoint:** `POST /api/report`
-- **İçerik Tipi:** `application/json`
-- **Gövde (Body):**
-  ```json
-  {
-    "decisions": [...],
-    "validationData": { "cv": [...], "bootstrap": {...} },
-    "figures": { "chart_name": "base64_data" }
-  }
-  ```
-- **Yanıt:** Nihai rapor özeti ve LaTeX snippet'i.
-
-## 📂 Dosya Yapısı (Sunucu Tarafı)
-
-Raporlar `results/[experiment_id]/` dizini altında saklanır:
-- `metadata.json`: Deneyin donanım ve yazılım konfigürasyonu.
-- `audit_log.txt`: Pipeline adımlarının zaman damgalı kaydı.
-- `final/decisions.csv`: Tüm kararların ham verisi.
-- `final/rationale_log.txt`: Kararların mantıksal gerekçeleri.
-- `performance_table.tex`: Teze hazır LaTeX tablosu.
-
-## 🧪 Metodoloji
-
-Pipeline şu aşamalardan oluşur:
-1. **Standardizasyon:** Görüntü parlaklık ve kontrast kalibrasyonu.
-2. **Segmentasyon:** ExG indeksi ve Otsu eşikleme ile bitki piksellerinin ayrılması.
-3. **Özellik Çıkarımı:** Renk momentleri (Skewness, Kurtosis) ve doku analizi (GLCM Entropy).
-4. **Karar:** Çok kriterli olasılık skorlama.
-5. **Validasyon:** İstatistiksel doğrulama ve güven analizi.
-
----
-*Bu proje Azolla bitkisi üzerine yapılan bilimsel araştırmaları desteklemek amacıyla geliştirilmiştir.*
+## Frond sayımı (ileri faz)
+V1 kapsamına dahil edilmedi; deneysel modül olarak planlanmıştır.
+Önerilen yaklaşım: distance transform + watershed + manuel doğrulama; gerektiğinde YOLO/Mask R-CNN/U-Net.

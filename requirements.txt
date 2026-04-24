@@ -1,0 +1,12 @@
+fastapi==0.115.9
+uvicorn[standard]==0.34.0
+opencv-python==4.11.0.86
+scikit-image==0.25.2
+numpy==2.2.4
+pandas==2.2.3
+Pillow==11.1.0
+SQLAlchemy==2.0.38
+scikit-learn==1.6.1
+python-multipart==0.0.20
+pydantic-settings==2.8.1
+scipy==1.15.2
